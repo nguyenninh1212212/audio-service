@@ -31,7 +31,7 @@ const GRPC_ADDRESS = `${HOST}:${RENDER_PORT}`;
 
 // --- HÀM KHỞI TẠO HTTP HEALTH CHECK (EXPRESS) ---
 // Hàm này chạy riêng và xử lý lỗi xung đột cổng
-function startHealthCheckServer(HOST) {
+function startHealthCheckServer(PORT, HOST) {
   const app = express();
 
   // Endpoint Health Check cho Render
@@ -42,8 +42,8 @@ function startHealthCheckServer(HOST) {
   const httpServer = http.createServer(app);
 
   // Express/HTTP cố gắng lắng nghe
-  httpServer.listen(8001, HOST, () => {
-    console.log(`✅ HTTP Health Check (Express) running at ${HOST}:${8001}`);
+  httpServer.listen(PORT, HOST, () => {
+    console.log(`✅ HTTP Health Check (Express) running at ${HOST}:${PORT}`);
   });
 
   httpServer.on("error", (e) => {
@@ -88,7 +88,7 @@ async function start() {
     ); // 2. KHỞI ĐỘNG HEALTH CHECK (HTTP/1.1)
 
     // Server này sẽ cố gắng chiếm cổng, nếu gRPC chiếm trước, nó sẽ báo EADDRINUSE và bỏ qua lỗi.
-    startHealthCheckServer(HOST);
+    startHealthCheckServer(RENDER_PORT, HOST);
   } catch (err) {
     console.error("❌ Fatal error during startup:", err);
     process.exit(1);
