@@ -1,0 +1,32 @@
+  syntax = "proto3";
+
+  package audio;
+
+  service AudioSearch {
+    rpc SearchSong(SearchSongRequest) returns (SearchSongResponse);
+    rpc GetRecommendSongs(SearchSongId) returns (SongsEmbeddingResponse);
+  }
+
+  message SearchSongRequest {
+    bytes audio = 1;
+  }
+
+  message SearchSongId {
+    string songId = 1;
+  }
+
+  message SearchSongResponse {
+    string songId = 1;
+    string title = 2;
+    string artist = 3;
+    float similarity = 4;
+  }
+
+  message SongEmbeddingItem {
+    string songId = 1;
+    float score= 2;
+  }
+
+  message SongsEmbeddingResponse {
+    repeated SongEmbeddingItem items = 1;
+  }

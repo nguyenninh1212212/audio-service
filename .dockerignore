@@ -1,0 +1,20 @@
+# Bỏ qua thư mục node_modules đã cài đặt cục bộ
+node_modules
+
+# Bỏ qua các tệp môi trường và bí mật
+.env
+.env.*
+*.local
+
+# Bỏ qua các tệp log và debug
+npm-debug.log
+yarn-error.log
+
+# Bỏ qua các tệp cấu hình của Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Bỏ qua các tệp quản lý phiên bản
+.git
+.gitignore
