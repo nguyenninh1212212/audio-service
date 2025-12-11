@@ -4,12 +4,7 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 dotenv.config();
 import startConsumers from "./services/startCosumer.js";
-import {
-  addSongFingerprint,
-  searchSong,
-  GetRecommendSongs,
-} from "./services/audioService.js";
-import { consumeMessage } from "./config/rabitmq.config.js";
+import { searchSong, GetRecommendSongs } from "./services/audioService.js";
 
 // --- THÊM THƯ VIỆN EXPRESS VÀ HTTP ---
 import express from "express";
@@ -29,7 +24,7 @@ const packageDef = protoLoader.loadSync(PROTO_PATH, {
 const proto = grpc.loadPackageDefinition(packageDef).audio;
 
 // LẤY PORT TỪ BIẾN MÔI TRƯỜNG CỦA RENDER
-const RENDER_PORT = process.env.PORT || 50051; // 50051 là cổng mặc định cho local dev/test
+const RENDER_PORT = 50051; // 50051 là cổng mặc định cho local dev/test
 const HOST = "0.0.0.0";
 const GRPC_ADDRESS = `${HOST}:${RENDER_PORT}`;
 
