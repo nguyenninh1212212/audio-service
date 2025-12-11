@@ -29,8 +29,32 @@ const RENDER_PORT = process.env.PORT || 50051;
 const HOST = "0.0.0.0";
 const GRPC_ADDRESS = `${HOST}:${RENDER_PORT}`;
 
+// --- HÀM HỖ TRỢ: BIẾN bindAsync THÀNH ĐỒNG BỘ ---
+async function startGrpcServerSafe(grpcServer, GRPC_ADDRESS) {
+  return new Promise((resolve, reject) => {
+    // Sử dụng bindAsync chính thức của gRPC
+    grpcServer.bindAsync(
+      GRPC_ADDRESS,
+      grpc.ServerCredentials.createInsecure(),
+      (err, actualPort) => {
+        if (err) {
+          // Nếu gRPC thất bại trong việc chiếm cổng, đây là lỗi FATAL.
+          return reject(err);
+        }
+
+        // Khởi động gRPC server sau khi bind thành công
+        grpcServer.start();
+        console.log(
+          `🚀 gRPC Audio Fingerprint Server running at port ${actualPort}`
+        );
+        resolve(grpcServer);
+      }
+    );
+  });
+}
+
 // --- HÀM KHỞI TẠO HTTP HEALTH CHECK (EXPRESS) ---
-// Hàm này chạy riêng và xử lý lỗi xung đột cổng
+// Hàm này chạy riêng và xử lý lỗi xung đột cổng EADDRINUSE
 function startHealthCheckServer(PORT, HOST) {
   const app = express();
 
@@ -47,7 +71,7 @@ function startHealthCheckServer(PORT, HOST) {
   });
 
   httpServer.on("error", (e) => {
-    // XỬ LÝ EADDRINUSE: Nếu gRPC đã chiếm cổng (thành công), ta bỏ qua lỗi này.
+    // XỬ LÝ EADDRINUSE: Bỏ qua lỗi nếu gRPC đã chiếm cổng thành công.
     if (e.code === "EADDRINUSE") {
       console.warn(
         `⚠️ Port ${PORT} already in use. Assuming gRPC server is handling HTTP/2.`
@@ -62,32 +86,18 @@ async function start() {
   try {
     console.log("⏳ Connecting MongoDB...");
     await mongoose.connect(process.env.MONGO_URI);
-    console.log("✅ MongoDB connected!"); // 1. KHỞI ĐỘNG SERVER gRPC (Dịch vụ chính)
+    console.log("✅ MongoDB connected!"); // 1. KHỞI ĐỘNG SERVER gRPC (ƯU TIÊN TUYỆT ĐỐI BẰNG AWAIT)
 
     const grpcServer = new grpc.Server();
 
     grpcServer.addService(proto.AudioSearch.service, {
       SearchSong: searchSong,
       GetRecommendSongs: GetRecommendSongs,
-    });
+    }); // CHỜ (AWAIT) cho gRPC bind và start thành công trước khi tiếp tục
 
-    // BẮT BUỘC dùng bindAsync()
-    grpcServer.bindAsync(
-      GRPC_ADDRESS,
-      grpc.ServerCredentials.createInsecure(),
-      (err, actualPort) => {
-        if (err) {
-          console.error("❌ gRPC bind error:", err); // KHÔNG RETURN: Thử tiếp Health Check Server (Bước 2)
-        } else {
-          console.log(
-            `🚀 gRPC Audio Fingerprint Server running at port ${actualPort}`
-          );
-          grpcServer.start();
-        }
-      }
-    ); // 2. KHỞI ĐỘNG HEALTH CHECK (HTTP/1.1)
+    await startGrpcServerSafe(grpcServer, GRPC_ADDRESS); // 2. KHỞI ĐỘNG HEALTH CHECK (HTTP/1.1)
 
-    // Server này sẽ cố gắng chiếm cổng, nếu gRPC chiếm trước, nó sẽ báo EADDRINUSE và bỏ qua lỗi.
+    // Express sẽ cố gắng chiếm cổng và thất bại (EADDRINUSE), nhưng lỗi sẽ được bỏ qua.
     startHealthCheckServer(RENDER_PORT, HOST);
   } catch (err) {
     console.error("❌ Fatal error during startup:", err);
